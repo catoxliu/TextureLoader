@@ -30,6 +30,8 @@ public class TextureLoaderPlugin
     private static extern void SetInitTextureCountAndSize(int texCount, int imageSize);
     [DllImport("TextureLoader")]
     private static extern bool IsInitTextureFinish();
+    [DllImport("TextureLoader")]
+    private static extern int GetLastSuccessUpdateTextureID();
     #endregion //external Native Func
 
     #region Local Member
@@ -38,7 +40,13 @@ public class TextureLoaderPlugin
     private static TextureLoaderMB mMonoBehaviour = null;
     private static int[] iInitTexIDList = null;
     private static bool bInitTexFinish = false;
+    private static int iLastSuccessUpdateTextureID = 0;
     #endregion //Local Member
+
+    #region Callbacks
+    public static event Action InitTexturesCallback;
+    public static event Action<int> UpdateTextureCallback;
+    #endregion // Callbacks
 
     #region Property
     /// <summary>
@@ -61,6 +69,14 @@ public class TextureLoaderPlugin
     /// </summary>
     public static bool IsInitTexturesFinish
     { get { return bInitTexFinish; } }
+
+    /// <summary>
+    /// -1 means waiting for load image success.
+    /// 0 means upload image to gpu texture failed.
+    /// return the textureid if succeed.
+    /// </summary>
+    public static int LastSuccessUpdateTextureID
+    { get { return iLastSuccessUpdateTextureID; } }
     #endregion //Property
 
     #region Public Static Func
@@ -147,6 +163,7 @@ public class TextureLoaderPlugin
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (mMonoBehaviour == null || eCurrentStatus != TextureLoaderStatus.TLS_IDLE || !bInitTexFinish) return false;
+        iLastSuccessUpdateTextureID = -1;
         StartLoadImageFile(path, imageSize);
         if (TextureID == 0) TextureID = iInitTexIDList[0];
         mMonoBehaviour.UpdateTexture(TextureID);
@@ -206,15 +223,42 @@ public class TextureLoaderPlugin
                     SendRenderEvent(0);
                     currentTask = -1;
                 }
-                else if (currentTask > 0 && eCurrentStatus == TextureLoaderStatus.TLS_LOAD_FILE_SUC)
+                else if (currentTask > 0)
                 {
-                    SendRenderEvent(currentTask);
-                    currentTask = -1;
+                    switch (eCurrentStatus)
+                    {
+                        //Load Image Failed
+                        case TextureLoaderStatus.TLS_IDLE:
+                            currentTask = -1;
+                            if (UpdateTextureCallback != null)
+                            {
+                                UpdateTextureCallback(-1);
+                            }
+                            break;
+                        //Load Image Success
+                        case TextureLoaderStatus.TLS_LOAD_FILE_SUC:
+                            SendRenderEvent(currentTask);
+                            currentTask = -2;
+                            break;
+                    }
                 }
                 if (!bInitTexFinish && IsInitTextureFinish())
                 {
                     bInitTexFinish = true;
                     GetInitTextureID(iInitTexIDList);
+                    if (InitTexturesCallback != null)
+                    {
+                        InitTexturesCallback();
+                    }
+                }
+                if (currentTask == -2 && eCurrentStatus == TextureLoaderStatus.TLS_IDLE)
+                {
+                    currentTask = -1;
+                    iLastSuccessUpdateTextureID = GetLastSuccessUpdateTextureID();
+                    if (UpdateTextureCallback != null)
+                    {
+                        UpdateTextureCallback(iLastSuccessUpdateTextureID);
+                    }
                 }
                 //Debug.Log("Current Status " + eCurrentStatus + " " + currentTask);
             }

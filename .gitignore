@@ -4,3 +4,7 @@ Android/textureloader/obj/
 Android/textureloader/bin/
 Android/textureloader/libs/armeabi-v7a
 Android/textureloader/libs/arm64-v8a
+*.apk
+*.sln
+*.csproj
+*.suo

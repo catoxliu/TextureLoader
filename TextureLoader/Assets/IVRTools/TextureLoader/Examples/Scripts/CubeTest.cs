@@ -12,6 +12,8 @@ public class CubeTest : MonoBehaviour {
 
     bool initTexture = false;
     float timeCounter = 0;
+    int iLeftTexID = 0, iRightTexID = 0;
+    int iCurrentUpdateTexID;
 
     void Awake()
     {
@@ -21,34 +23,54 @@ public class CubeTest : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         StartCoroutine(RollCube());
+        TextureLoaderPlugin.InitTexturesCallback += InitTextureFinish;
+        TextureLoaderPlugin.UpdateTextureCallback += UpdateTextureFinish;
         TextureLoaderPlugin.InitTexture(2, 0, initImagePath);
     }
-	
-	// Update is called once per frame
-	void Update () {
-        timeCounter += Time.unscaledDeltaTime;
-        if (!initTexture && TextureLoaderPlugin.IsInitTexturesFinish)
+
+    void InitTextureFinish()
+    {
+        Debug.Log("Init Texture Finish!");
+        initTexture = true;
+        iLeftTexID = TextureLoaderPlugin.InitTextureIDList[0];
+        iRightTexID = TextureLoaderPlugin.InitTextureIDList[1];
+        Texture2D t1 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)iLeftTexID);
+        mCube1.GetComponent<MeshRenderer>().material.mainTexture = t1;
+        Texture2D t2 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)iRightTexID);
+        mCube2.GetComponent<MeshRenderer>().material.mainTexture = t2;
+    }
+
+    void UpdateTextureFinish(int texID)
+    {
+        Debug.Log("Update Texture ["+iCurrentUpdateTexID+"] Finish with " + texID);
+        if (texID == -1)
         {
-            initTexture = true;
-            Texture2D t1 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)TextureLoaderPlugin.InitTextureIDList[0]);
-            mCube1.GetComponent<MeshRenderer>().material.mainTexture = t1;
-            Texture2D t2 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)TextureLoaderPlugin.InitTextureIDList[1]);
-            mCube2.GetComponent<MeshRenderer>().material.mainTexture = t2;
+            Debug.Log(iCurrentUpdateTexID == iLeftTexID ? "Load Left Cube Image Fail" : "Load Right Cube Image Fail");
         }
-        else if (timeCounter > 1)
+        else if (texID == 0)
         {
+            Debug.Log(iCurrentUpdateTexID == iLeftTexID ? "Update Left Cube Fail" : "Update Right Cube Fail");
+        }
+        else if (iCurrentUpdateTexID == texID)
+        {
+            Debug.Log(texID == iLeftTexID ? "Update Left Cube Success" : "Update Right Cube Success");
+        }
+    }
+
+    // Update is called once per frame
+    void Update () {
+        timeCounter += Time.unscaledDeltaTime;
+        if (initTexture && timeCounter > 1)
+        {
+            if (TextureLoaderPlugin.CurrentStatus != TextureLoaderPlugin.TextureLoaderStatus.TLS_IDLE) return;
             timeCounter = 0;
             int s = (int)Time.unscaledTime % 4;
-            switch (s)
+            iCurrentUpdateTexID = (s % 2 == 0 ? iLeftTexID : iRightTexID);
+            string updatePath = (s < 2) ? updateImagePath1 : updateImagePath2;
+            if (!TextureLoaderPlugin.UpdateTexture(updatePath, 0, iCurrentUpdateTexID))
             {
-                case 0:
-                case 1:
-                    TextureLoaderPlugin.UpdateTexture(updateImagePath1, 0, TextureLoaderPlugin.InitTextureIDList[s % 2]);
-                    break;
-                case 2:
-                case 3:
-                    TextureLoaderPlugin.UpdateTexture(updateImagePath2, 0, TextureLoaderPlugin.InitTextureIDList[s % 2]);
-                    break;
+                Debug.LogWarning("Could not update texture right now!");
+                iCurrentUpdateTexID = 0;
             }
         }
 	}

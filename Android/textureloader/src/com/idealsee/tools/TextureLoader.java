@@ -15,12 +15,25 @@ public class TextureLoader {
 	private static int[] textureIDList;
 	
 	private native static void nativeImageLoadFinish(boolean isLoadSuccess);
-	private native static void nativeUpdateTextureFinish();
+	private native static void nativeUpdateTextureFinish(int textureID);
 	private native static void nativeInitTexFinish(int[] initTexIdList);
+	
+	private static boolean isGlError(String msg) {
+		int result = GLES20.glGetError();
+		if (result != 0) {
+			Log.e(TAG, "GL ERROR CODE ["+result+"] :" + msg);
+			return true;
+		}
+		return false;
+	}
 	
 	public static void initTexture(int texCount, int imageSize) {
 		int[] textures = new int[texCount];
 		GLES20.glGenTextures(texCount, textures, 0);
+		if (isGlError("glGenTextures")) {
+			nativeInitTexFinish(null);
+			return;
+		}
 		
 		for (int i = 0; i < texCount; i++)
 		{
@@ -28,7 +41,7 @@ public class TextureLoader {
 
 			// ...and bind it to our array
 			GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[i]);
-			Log.v(TAG, "glGetError " + GLES20.glGetError());
+			if (isGlError("glBindTexture")) continue;
 
 			// Create Nearest Filtered Texture
 			GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
@@ -47,13 +60,12 @@ public class TextureLoader {
 			
 			if (updateBitmap != null) {
 				GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, updateBitmap, 0);
-				Log.v(TAG, "glGetError " + GLES20.glGetError());
 			} else {
 				Bitmap initBitmap = Bitmap.createBitmap(imageSize, imageSize, Bitmap.Config.ARGB_8888);
 				GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, initBitmap, 0);
-				Log.v(TAG, "glGetError " + GLES20.glGetError());
 				initBitmap.recycle();
 			}
+			isGlError("texImage2D");
 		}
 		if (updateBitmap != null) {
 			updateBitmap.recycle();
@@ -95,13 +107,22 @@ public class TextureLoader {
 		Log.v(TAG, "updateTexture id : " + textureID);
 		if (updateBitmap == null) {
 			Log.e(TAG, "update image is null!");
+			nativeUpdateTextureFinish(-1);
 			return;
 		}
+		
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureID);
-		Log.v(TAG, "glGetError " + GLES20.glGetError());
+		if (isGlError("updateTexture glBindTexture")) {
+			nativeUpdateTextureFinish(0);
+			return;
+		}
+		
 		GLUtils.texSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0, updateBitmap);
-		Log.v(TAG, "glGetError " + GLES20.glGetError());
-		nativeUpdateTextureFinish();
+		if (isGlError("updateTexture texSubImage2D")) {
+			nativeUpdateTextureFinish(0);
+		}else {
+			nativeUpdateTextureFinish(textureID);
+		}		
 		
 		updateBitmap.recycle();
 		updateBitmap = null;

@@ -18,6 +18,7 @@ static int currentStatus = 0; // 0-not init; 1-init failed; 2-idle; 3-loading im
 static jint* initTexID = NULL;
 static int texCount = 1;
 static int imageSize = 512;
+static int lastSuccessUpdateTexID = 0;
 
 // Plugin function to handle a specific rendering event
 static void UNITY_INTERFACE_API OnRenderEvent(int eventID)
@@ -57,6 +58,7 @@ static void UNITY_INTERFACE_API OnRenderEvent(int eventID)
     {
     	//Update
     	currentStatus = 5;
+    	lastSuccessUpdateTexID = 0;
     	env->CallStaticVoidMethod(classTextureLoader, updateTextureID, eventID);
     	__android_log_print(ANDROID_LOG_INFO, "JNIMsg", "CallObjectMethod updateTexture");
     }
@@ -128,9 +130,15 @@ extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
 	}
 }
 
-void _native_ImageLoadFinish(bool finish)
+extern "C" int UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
+	GetLastSuccessUpdateTextureID()
 {
-	if (finish)
+	return lastSuccessUpdateTexID;
+}
+
+void _native_ImageLoadFinish(JNIEnv * env, jobject thiz, jboolean finish)
+{
+	if (finish == JNI_TRUE)
 	{
 		currentStatus = 4;
 	}
@@ -140,20 +148,27 @@ void _native_ImageLoadFinish(bool finish)
 	}
 }
 
-void _native_UpdateTextureFinish()
+void _native_UpdateTextureFinish(JNIEnv * env, jobject thiz, jint texID)
 {
+	lastSuccessUpdateTexID = texID;
 	currentStatus = 2;
 }
 
 void _native_InitTexFinish(JNIEnv * env, jobject thiz, jintArray result)
 {
+	if (result == NULL)
+	{
+		currentStatus = 1;
+		return;
+	}
 	initTexID = env->GetIntArrayElements(result, NULL);
-	currentStatus = 2;
+	if (initTexID == NULL) currentStatus = 1;
+	else currentStatus = 2;
 }
 
 static JNINativeMethod gMethods[] = {
         { "nativeImageLoadFinish", "(Z)V", (void *)_native_ImageLoadFinish },
-		{ "nativeUpdateTextureFinish", "()V", (void *)_native_UpdateTextureFinish },
+		{ "nativeUpdateTextureFinish", "(I)V", (void *)_native_UpdateTextureFinish },
 		{ "nativeInitTexFinish", "([I)V", (void *)_native_InitTexFinish },
 };
 
