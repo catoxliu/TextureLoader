@@ -5,10 +5,10 @@ We are developing VR app on our all-in-one HMD** "Idealens K2" **and loading ext
 
 The key idea here is to prepare GPU resources (generate Texture2Ds) at the init state and when it need to load a image a seperate thread will read file and update GPU resource (generated before) as soon as file reading finishes.
 
-#Usage
+# Usage
 All you need is in **TextureLoaderPlugin.cs**.
 
-#Functions
+# Functions
 * **Init()**
 Call this at the very beginning of your scene. This should be called only once in your project.
 * **InitTexture(TextureCount, TextureSize, InitImagePath)**
@@ -16,7 +16,7 @@ This is used to prepare GPU resources (generate Texture2Ds). TextureCount means 
 * **UpdateTexture(imagePath, imageSize, TextureID)**
 This is used to load an Image file to one of your Texture2Ds generated above. imageSize must be the same to what you set in InitTexture, 0 means default value will be used. TextureID is the native resource ID you could get after InitTexture generate Texture2Ds correctly.
 
-#Callbacks
+# Callbacks
 * **InitTexturesCallback**
 This will be called once the Texture2Ds generated correctly and native resource IDs could be reach through InitTextureIDList[].
 * **UpdateTextureFinish(TextureID)**
