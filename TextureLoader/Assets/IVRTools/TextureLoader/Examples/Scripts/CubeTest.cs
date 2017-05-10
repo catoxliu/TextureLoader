@@ -25,7 +25,7 @@ public class CubeTest : MonoBehaviour {
         StartCoroutine(RollCube());
         TextureLoaderPlugin.InitTexturesCallback += InitTextureFinish;
         TextureLoaderPlugin.UpdateTextureCallback += UpdateTextureFinish;
-        TextureLoaderPlugin.InitTexture(2, 0, initImagePath);
+        TextureLoaderPlugin.InitTexture(2, 4096, initImagePath);
     }
 
     void InitTextureFinish()
@@ -34,10 +34,15 @@ public class CubeTest : MonoBehaviour {
         initTexture = true;
         iLeftTexID = TextureLoaderPlugin.InitTextureIDList[0];
         iRightTexID = TextureLoaderPlugin.InitTextureIDList[1];
-        Texture2D t1 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)iLeftTexID);
+        //Texture2D t1 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)iLeftTexID);
+        Texture2D t1 = new Texture2D(4096, 4096, TextureFormat.RGBAFloat, false, false);
+        t1.UpdateExternalTexture((System.IntPtr)iLeftTexID);
         mCube1.GetComponent<MeshRenderer>().material.mainTexture = t1;
-        Texture2D t2 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)iRightTexID);
+        //Texture2D t2 = Texture2D.CreateExternalTexture(512, 512, TextureFormat.ARGB4444, false, false, (System.IntPtr)iRightTexID);
+        Texture2D t2 = new Texture2D(4096, 4096, TextureFormat.RGBAFloat, false, false);
+        t2.UpdateExternalTexture((System.IntPtr)iRightTexID);
         mCube2.GetComponent<MeshRenderer>().material.mainTexture = t2;
+
     }
 
     void UpdateTextureFinish(int texID)
@@ -67,7 +72,7 @@ public class CubeTest : MonoBehaviour {
             int s = (int)Time.unscaledTime % 4;
             iCurrentUpdateTexID = (s % 2 == 0 ? iLeftTexID : iRightTexID);
             string updatePath = (s < 2) ? updateImagePath1 : updateImagePath2;
-            if (!TextureLoaderPlugin.UpdateTexture(updatePath, 0, iCurrentUpdateTexID))
+            if (!TextureLoaderPlugin.UpdateTexture(updatePath, 4096, iCurrentUpdateTexID))
             {
                 Debug.LogWarning("Could not update texture right now!");
                 iCurrentUpdateTexID = 0;
