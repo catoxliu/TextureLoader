@@ -1,3 +1,6 @@
+# New Branch
+I just upload a new branch "texture_buffer" which used the new Opengl ES 3.1 feature [EXT_texture_buffer](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_texture_buffer.txt) to do direct CPU writes (MapBuffer).
+
 # TextureLoader
 This is a Unity3D native plugin for Android platform to load an external image file using OpenGL ES.
 
