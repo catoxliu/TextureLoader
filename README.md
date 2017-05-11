@@ -1,9 +1,13 @@
-# TextureLoader
-This is a Unity3D native plugin for Android platform to load an external image file using OpenGL ES.
+# Requirements
+* I develop with **Unity3D 5.6** and tested it on my **Android 6.0** based phone, not sure with other versions or platforms.
+* The shader is written to target **GLSL ES 3.2**, as far as I know, other versions of GLSL ES do not support SamplerBuffer.
 
-We are developing VR app on our all-in-one HMD** "Idealens K2" **and loading external image file when running is a very common demand here. **Since Unity's LoadImage will cause intolerable latency due to generating new GPU resources, I made this native plugin to load image files by myself.** It becomes quite smooth using this plugin to update a 1024*1024 Texture.
-
-The key idea here is to prepare GPU resources (generate Texture2Ds) at the init state and when it need to load a image a seperate thread will read file and update GPU resource (generated before) as soon as file reading finishes.
+# Known Issues
+* Pay attention about the **GL_MAX_TEXTURE_BUFFER_SIZE_EXT** value. The number of texels in the texel array is then clamped to the value of the implementation-dependent limit MAX_TEXTURE_BUFFER_SIZE_EXT. When a buffer texture is accessed in a shader, the results of a texel fetch are undefined if the specified texel coordinate is negative, or greater than or equal to the clamped number of texels in the texel array. More details could find in [EXT_texture_buffer](https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_texture_buffer.txt) and [wiki](https://www.khronos.org/opengl/wiki/Buffer_Texture).
+* **Don't** use Texture2D.CreateExternalTexture which will generate an OpenGL error, because it will try to bind the Texture ID to Texture2D. And if you use a wrong shader which regard the texture as Texture2D will cause the same problem, for example, use Unity standard surface shader or use a sampler2D. Remeber, **only samplerBuffer could be used for Buffer Texture**.
+* Even though [Unity3D support pure GLSL shader](https://docs.unity3d.com/Manual/SL-GLSLShaderPrograms.html), but the documentation is very poor and it takes me hours to figure it out how to let unity compiled shader target GLSL ES 3.2.
+* In GLSL, only **highp int** or **highp uint** use 32-bits, others will use implementation-dependent numbers of bits which is 16 bits on my test phone. So if you need large numbers, make sure you use **highp int** to avoid overflow. And I really recommend to read [GLSL_ES_Specification_3.20](https://www.khronos.org/registry/OpenGL/specs/es/3.2/GLSL_ES_Specification_3.20.pdf) if you want to write your onw shader.
+* I didn't figure out a way to use multiple Buffer Texture, so **ONLY ONE** texture could be used!
 
 # Usage
 All you need is in **TextureLoaderPlugin.cs**.
